@@ -31,10 +31,7 @@ export default {
 
   data() {
     return {
-      changedCookie: false,
-      interval: null,
       code: null,
-      codeInCookie: '',
       groups: [],
       profile: null
     };
@@ -45,7 +42,7 @@ export default {
       const params = {
         client_id: 8152845,
         display: 'popup',
-        redirect_uri: 'http://localhost:8080/authVk.html',
+        redirect_uri: 'https://webmacaque.ru/authVk.html',
         scope: 'groups',
         group_ids: '',
         response_type: 'code'
@@ -54,19 +51,15 @@ export default {
       return `https://oauth.vk.com/authorize?client_id=${params.client_id}&display=${params.display}&redirect_uri=${params.redirect_uri}&scope=${params.scope}&group_ids=${params.group_ids}&response_type=${params.response_type}&v=5.131`;
     }
   },
-  
-  watch: {
-    changedCookie(value) {
-      if (value) {
-        clearInterval(this.interval);
-        this.changedCookie = false;
-        console.log('Interval Stop');
-      }
-    }
+
+  mounted() {
+    this.initVK();
+
+    window.addEventListener('message', this.handleGetCode);
   },
 
-  created() {
-    this.codeInCookie = this.getCookie('vk_api_code');
+  beforeUnmount() {
+    window.removeEventListener('message', this.handleGetCode);
   },
 
   methods: {    
@@ -109,9 +102,9 @@ export default {
     logoutVK() {
       window.VK.Auth.logout();
       this.code = null;
-      this.codeInCookie = '';
       this.groups = [];
       this.profile = null;
+      window.iframe.remove();
     },
 
     // Получение данных аккаунта и его сообществ
@@ -131,43 +124,24 @@ export default {
 
     // Получение ключа доступа сообщества
     getCode() {
-      // const popup = window.open('https://webmacaque.ru/authVk.html', '_blank', 'popup=1, titlebar=no,toolbar=no,status=no,menubar=no,scrollbars=no,resizable=no,left=10000, top=10000, width=1, height=1, visible=none');
+      if (window.iframe) {
+        window.iframe.remove();
+      }
       var element = document.createElement('iframe');
       element.setAttribute('id', 'iframe');
-      element.setAttribute('src', 'http://localhost:8080/authVk.html');
+      element.setAttribute('src', 'https://webmacaque.ru/authVk.html');
       document.body.appendChild(element);
 
       setTimeout(() => {
         window.iframe.contentWindow.postMessage({ source: 'vk_api', url: this.authorizeUrl });
-
-        this.interval = setInterval(this.checkCookie, 500);
-        console.log('Interval Start');
       }, 1000);
     },
 
-    // Метод для отслеживания изменений в Cookie
-    checkCookie() {
-      console.log('checkCookie');
-      const newCookie = this.getCookie('vk_api_code');
-
-      if (newCookie != this.codeInCookie) {
-          this.changedCookie = true;
-          this.code = this.getCookie('vk_api_code');
-          this.codeInCookie = this.code;
-        }
-    },
-
-    // Получение конкретного Cookie
-    getCookie(name) {
-      let matches = document.cookie.match(new RegExp(
-        "(?:^|; )" + name.replace(/([.$?*|{}()[]\/+^])/g, '\\$1') + "=([^;]*)"
-      ));
-      return matches ? decodeURIComponent(matches[1]) : undefined;
+    handleGetCode(event) {
+      if (event.data.source === 'vk_api') {
+        this.code = event.data.code;
+      }
     }
-  },
-
-  mounted() {
-    this.initVK();
   }
 }
 </script>
@@ -175,6 +149,10 @@ export default {
 <style>
 .container {
   display: flex;
+}
+
+#iframe {
+  visibility: hidden;
 }
 
 .profile {

@@ -8,30 +8,6 @@
 </head>
 <body>
   <script>
-    // Добавление cookie
-    function setCookie(name, value, options = {}) {
-      options = {
-        path: '/',
-        ...options
-      };
-
-      if (options.expires instanceof Date) {
-        options.expires = options.expires.toUTCString();
-      }
-
-      let updatedCookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
-
-      for (let optionKey in options) {
-        updatedCookie += "; " + optionKey;
-        let optionValue = options[optionKey];
-        if (optionValue !== true) {
-          updatedCookie += "=" + optionValue;
-        }
-      }
-
-      document.cookie = updatedCookie;
-    }
-
     // Обработка сообщения из компонента с адресом для получения code
     window.addEventListener('message', (event) => {
       if (event.data.source === 'vk_api') {
@@ -43,8 +19,7 @@
 
     // Если окно открылось с параметром code в адресной строке
     if (params.get('code')) {
-      setCookie('vk_api_code', params.get('code'));
-      window.close();
+      window.parent.postMessage({ source: 'vk_api', code: params.get('code') })
     }
   </script>
 </body>

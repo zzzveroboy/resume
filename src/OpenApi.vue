@@ -43,8 +43,8 @@ export default {
         client_id: 8152845,
         display: 'popup',
         redirect_uri: 'https://webmacaque.ru/authVk.html',
-        scope: 'groups',
-        group_ids: '',
+        scope: 'stories,photos,messages,docs,manage',
+        group_ids: this.groups.map(({ id }) => id).join(),
         response_type: 'code'
       };
 
@@ -124,16 +124,19 @@ export default {
 
     // Получение ключа доступа сообщества
     getCode() {
-      if (window.iframe) {
-        window.iframe.remove();
-      }
-      var element = document.createElement('iframe');
-      element.setAttribute('id', 'iframe');
-      element.setAttribute('src', 'https://webmacaque.ru/authVk.html');
-      document.body.appendChild(element);
+      var width = 665,
+          height = 370,
+          left = (screen.width/2)-(width/2),
+          top = (screen.height/2)-(height/2),
+          features = `width=${width},height=${height},left=${left},top=${top}`;
+
+      const popup = open('https://webmacaque.ru/authVk.html', '_blank', `popup=1,${features}`);
 
       setTimeout(() => {
-        window.iframe.contentWindow.postMessage({ source: 'vk_api', url: this.authorizeUrl });
+        popup.postMessage({ source: 'vk_api', url: this.authorizeUrl });
+
+        this.interval = setInterval(this.checkCookie, 500);
+        console.log('Interval Start');
       }, 1000);
     },
 

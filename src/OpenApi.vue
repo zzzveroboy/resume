@@ -31,7 +31,10 @@ export default {
 
   data() {
     return {
+      changedCookie: false,
+      interval: null,
       code: null,
+      codeInCookie: '',
       groups: [],
       profile: null
     };
@@ -51,15 +54,23 @@ export default {
       return `https://oauth.vk.com/authorize?client_id=${params.client_id}&display=${params.display}&redirect_uri=${params.redirect_uri}&scope=${params.scope}&group_ids=${params.group_ids}&response_type=${params.response_type}&v=5.131`;
     }
   },
+  
+  watch: {
+    changedCookie(value) {
+      if (value) {
+        clearInterval(this.interval);
+        this.changedCookie = false;
+        console.log('Interval Stop');
+      }
+    }
+  },
+
+  created() {
+    this.codeInCookie = this.getCookie('vk_api_code');
+  },
 
   mounted() {
     this.initVK();
-
-    window.addEventListener('message', this.handleGetCode);
-  },
-
-  beforeUnmount() {
-    window.removeEventListener('message', this.handleGetCode);
   },
 
   methods: {    
@@ -102,9 +113,9 @@ export default {
     logoutVK() {
       window.VK.Auth.logout();
       this.code = null;
+      this.codeInCookie = '';
       this.groups = [];
       this.profile = null;
-      window.iframe.remove();
     },
 
     // Получение данных аккаунта и его сообществ
@@ -140,10 +151,24 @@ export default {
       }, 1000);
     },
 
-    handleGetCode(event) {
-      if (event.data.source === 'vk_api') {
-        this.code = event.data.code;
-      }
+    // Метод для отслеживания изменений в Cookie
+    checkCookie() {
+      console.log('checkCookie');
+      const newCookie = this.getCookie('vk_api_code');
+
+      if (newCookie != this.codeInCookie) {
+          this.changedCookie = true;
+          this.code = this.getCookie('vk_api_code');
+          this.codeInCookie = this.code;
+        }
+    },
+
+    // Получение конкретного Cookie
+    getCookie(name) {
+      let matches = document.cookie.match(new RegExp(
+        "(?:^|; )" + name.replace(/([.$?*|{}()[]\/+^])/g, '\\$1') + "=([^;]*)"
+      ));
+      return matches ? decodeURIComponent(matches[1]) : undefined;
     }
   }
 }
@@ -152,10 +177,6 @@ export default {
 <style>
 .container {
   display: flex;
-}
-
-#iframe {
-  visibility: hidden;
 }
 
 .profile {
